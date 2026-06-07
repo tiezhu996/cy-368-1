@@ -1,54 +1,119 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { fetchOverview } from "./api/client";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { APP_CODE, APP_NAME } from "./constants/app";
 import { REQUEST_MESSAGES } from "./constants/messages";
-import { createFallbackOverview } from "./state/dashboard";
-import type { OverviewResponse } from "./types";
-import FeatureStrip from "./components/FeatureStrip.vue";
-import MetricGrid from "./components/MetricGrid.vue";
-import OperationsTable from "./components/OperationsTable.vue";
+import { routes } from "./routes";
+import OverviewView from "./views/OverviewView.vue";
+import BookingView from "./views/BookingView.vue";
 
-const overview = ref<OverviewResponse>(createFallbackOverview());
-const notice = ref(REQUEST_MESSAGES.overviewFallback);
+const currentHash = ref(window.location.hash || "#/");
 
 function goHealth() {
   window.location.href = REQUEST_MESSAGES.healthPath;
 }
 
-onMounted(async () => {
-  try {
-    overview.value = await fetchOverview();
-    notice.value = "后端服务已联通，当前展示实时接口数据。";
-  } catch {
-    notice.value = REQUEST_MESSAGES.overviewFallback;
+function navigate(path: string) {
+  window.location.hash = path;
+  currentHash.value = path;
+}
+
+function handleHashChange() {
+  currentHash.value = window.location.hash || "#/";
+}
+
+const currentRoute = computed(() => {
+  const hash = currentHash.value.replace("#", "");
+  if (hash === "/booking") {
+    return { path: "/booking", component: BookingView };
   }
+  return { path: "/", component: OverviewView };
+});
+
+const activeNav = computed(() => {
+  const hash = currentHash.value.replace("#", "");
+  return hash === "/booking" ? "/booking" : "/";
+});
+
+onMounted(() => {
+  window.addEventListener("hashchange", handleHashChange);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("hashchange", handleHashChange);
 });
 </script>
 
 <template>
   <main class="app-shell">
     <header class="topbar">
-      <div>
+      <div class="brand-wrap">
         <span class="brand-code">{{ APP_CODE }}</span>
         <h1 class="brand-title">{{ APP_NAME }}</h1>
       </div>
-      <el-button type="primary" @click="goHealth">API Health</el-button>
+      <nav class="top-nav">
+        <a
+          v-for="route in routes"
+          :key="route.path"
+          class="nav-link"
+          :class="{ active: activeNav === route.path }"
+          @click.prevent="navigate(route.path)"
+        >
+          {{ route.label }}
+        </a>
+        <el-button type="primary" @click="navigate('/booking')">我要预约</el-button>
+      </nav>
     </header>
-    <section class="workspace">
-      <div class="lead-grid">
-        <article class="hero-panel">
-          <span class="pill">{{ notice }}</span>
-          <h2>{{ overview.appName }}</h2>
-          <p>{{ overview.description }}</p>
-        </article>
-        <MetricGrid :items="overview.kpis" />
-      </div>
-      <FeatureStrip :items="overview.features" />
-      <section class="work-panel">
-        <h2>运营任务流</h2>
-        <OperationsTable :records="overview.records" />
-      </section>
-    </section>
+    <component :is="currentRoute.component" />
   </main>
 </template>
+
+<style scoped>
+.brand-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.nav-link {
+  color: color-mix(in srgb, #1d2229 70%, #546a7b 30%);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 6px 4px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.nav-link:hover {
+  color: #546a7b;
+}
+
+.nav-link.active {
+  color: #1d2229;
+  border-bottom-color: #b84a37;
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .top-nav {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .nav-link {
+    font-size: 14px;
+  }
+}
+</style>
