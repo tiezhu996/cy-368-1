@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed, provide } from "vue";
 import { APP_CODE, APP_NAME } from "./constants/app";
 import { REQUEST_MESSAGES } from "./constants/messages";
 import { routes } from "./routes";
@@ -7,6 +7,7 @@ import OverviewView from "./views/OverviewView.vue";
 import BookingView from "./views/BookingView.vue";
 
 const currentHash = ref(window.location.hash || "#/");
+const refreshKey = ref(0);
 
 function goHealth() {
   window.location.href = REQUEST_MESSAGES.healthPath;
@@ -18,8 +19,19 @@ function navigate(path: string) {
 }
 
 function handleHashChange() {
+  const oldHash = currentHash.value.replace("#", "");
+  const newHash = (window.location.hash || "#/").replace("#", "");
   currentHash.value = window.location.hash || "#/";
+  if (oldHash === "/booking" && newHash === "/") {
+    refreshKey.value++;
+  }
 }
+
+function triggerRefresh() {
+  refreshKey.value++;
+}
+
+provide("triggerRefresh", triggerRefresh);
 
 const currentRoute = computed(() => {
   const hash = currentHash.value.replace("#", "");
@@ -63,7 +75,7 @@ onUnmounted(() => {
         <el-button type="primary" @click="navigate('/booking')">我要预约</el-button>
       </nav>
     </header>
-    <component :is="currentRoute.component" />
+    <component :is="currentRoute.component" :key="`${currentRoute.path}-${refreshKey}`" />
   </main>
 </template>
 

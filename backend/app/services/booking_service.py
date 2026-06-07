@@ -33,7 +33,7 @@ def create_booking(db: Session, booking_data: BookingCreate):
 def get_today_booking_count(db: Session):
     today = date.today()
     count = db.query(func.count(BookingRecord.id)).filter(
-        BookingRecord.booking_date == today
+        func.date(BookingRecord.created_at) == today
     ).scalar()
     return {"count": count or 0}
 

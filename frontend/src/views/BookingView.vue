@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, inject } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   fetchFields,
@@ -8,6 +8,8 @@ import {
 } from "../api/client";
 import type { Field, AvailableSlot, BookingRequest } from "../types";
 import { APP_CODE, APP_NAME } from "../constants/app";
+
+const triggerRefresh = inject<() => void>("triggerRefresh", () => {});
 
 const fields = ref<Field[]>([]);
 const availableSlots = ref<AvailableSlot[]>([]);
@@ -56,8 +58,8 @@ const isFormValid = computed(() => {
 });
 
 function goOverview() {
-  window.location.hash = "";
-  window.location.href = "/";
+  triggerRefresh();
+  window.location.hash = "#/";
 }
 
 async function loadFields() {
@@ -182,7 +184,7 @@ async function handleSubmit() {
       player_count: 1,
       remark: "",
     };
-    window.location.href = "/";
+    goOverview();
   } catch (error: any) {
     ElMessage.error(error.message || "预约失败，请稍后重试");
   } finally {
